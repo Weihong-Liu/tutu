@@ -1,0 +1,78 @@
+# Python相关
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv/
+.pyenv/
+.Python
+
+# 编辑器/IDE相关
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# 打包工具相关
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# 日志和临时文件
+*.log
+*.pot
+*.mo
+*.swp
+*.swo
+*.bak
+*.tmp
+*.temp
+*.old
+*.orig
+
+# 数据库、环境和配置文件
+*.db
+*.sqlite
+*.env
+*.ini
+*.cfg
+.env.*
+
+# 测试结果
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Docker
+*.dockerignore
+Dockerfile
+
+# 缓存文件
+*.mypy_cache/
+*.pytest_cache/
+
+# 单元测试文件
+.tox/
+.nox/
+
+# 文档相关
+site/
+
+# 可部署的配置文件
+*.conf
+*.json
+
+# 其他需要忽略的文件根据具体项目添加

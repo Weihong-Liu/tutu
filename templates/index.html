@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seat Reservation</title>
+</head>
+<body>
+    <h1>Seat Reservation System</h1>
+    <form action="/submit_url" method="POST">
+        <label for="url">Enter the URL:</label>
+        <input type="text" id="url" name="url" required>
+        <button type="submit">Submit</button>
+    </form>
+
+    <h2>Scan this QR code to get the login URL:</h2>
+    <img src="{{ url_for('static', filename='qr.png') }}" alt="QR Code" width="200">
+</body>
+</html>
