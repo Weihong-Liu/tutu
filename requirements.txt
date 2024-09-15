@@ -1,0 +1,5 @@
+celery
+requests
+flask
+redis
+websocket

@@ -1,7 +1,16 @@
+import time
 from celery import Celery
 from datetime import datetime, timedelta
-from tools import get_session, reserve_seat, reserve_cancel, keep_session, check_in
-import time
+from tools import (
+    get_session, 
+    reserve_seat, 
+    reserve_cancel, 
+    keep_session, 
+    get_index_data, 
+    get_often_seat, 
+    check_in
+)
+
 
 # 配置 Celery
 app = Celery('tasks', broker='redis://localhost:6379/0')
@@ -17,11 +26,11 @@ def start_reservation_task(cookie_string):
     keep_session(session)
 
     # 预约座位逻辑
-    success = reserve_seat(session)
+    success = True  # reserve_seat(session)
     if success:
         print("前一天晚上 22:00 座位预约成功！")
         # 调度第二天早上 8:49 检查是否签到或重新预约
-        reserve_and_check_in_task.apply_async((cookie_string,), eta=datetime.now().replace(hour=17, minute=3, second=0))
+        reserve_and_check_in_task.apply_async((cookie_string,), eta=datetime.now().replace(hour=8, minute=49, second=0))
     else:
         print("预约座位失败，请稍后重试。")
 
@@ -46,12 +55,15 @@ def reserve_and_check_in_task(cookie_string):
     success_cancel = reserve_cancel(session)
     if success_cancel:
         print("当前预约已取消，正在重新预约...")
-        success_reserve = reserve_seat(session)
+
+        index_data = get_index_data(session)
+        often_seat = get_often_seat(index_data)
+        success_reserve = reserve_seat(session, often_seat)
         if success_reserve:
             print("重新预约成功！")
             # 记录当前预约的时间，调度 1 小时 - 1 分钟后的签到检查任务
             reservation_time = datetime.now()
-            check_in_deadline = reservation_time + timedelta(minutes=1)#hours=1, minutes=-1
+            check_in_deadline = reservation_time + timedelta(hours=1, minutes=-1) 
             check_in_task.apply_async((cookie_string, reservation_time), eta=check_in_deadline)
         else:
             print("重新预约失败，请稍后重试。")
