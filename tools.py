@@ -8,8 +8,29 @@ import http.cookiejar
 import copy
 import threading
 from loguru import logger
+import pickle
+import redis
 
 import constants
+
+
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
+
+
+def store_session_data(session_key, session):
+    session_data = pickle.dumps(session.cookies)
+    redis_client.set(session_key, session_data)
+
+
+def load_session_data(session_key):
+    session_data = redis_client.get(session_key)
+    if session_data:
+        cookies = pickle.loads(session_data)
+        session = requests.Session()
+        session.cookies.update(cookies)
+        return session
+    else:
+        return None
 
 
 def get_code(url):

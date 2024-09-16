@@ -3,3 +3,6 @@ requests
 flask
 redis
 websocket
+loguru
+pytz
+gunicorn
