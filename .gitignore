@@ -58,7 +58,6 @@ coverage.xml
 
 # Docker
 *.dockerignore
-Dockerfile
 
 # 缓存文件
 *.mypy_cache/
@@ -72,7 +71,6 @@ Dockerfile
 site/
 
 # 可部署的配置文件
-*.conf
 *.json
 
 # 其他需要忽略的文件根据具体项目添加
