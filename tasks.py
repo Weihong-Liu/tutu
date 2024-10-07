@@ -12,6 +12,7 @@ from tools import (
     keep_session, 
     get_index_data, 
     get_often_seat, 
+    pre_reservation, 
     check_in
 )
 import constants
@@ -63,16 +64,18 @@ def start_reservation_task(session_key):
         print("Session expired or not found.")
         return
     # 预约座位逻辑
-    success = True#reserve_seat(session)
+    index_data = get_index_data(session)
+    often_seat = get_often_seat(index_data)
+    success = pre_reservation(session, often_seat,retry=20, time_interval=2)
     if success:
         print("座位预约成功！")
-        # 调度下一步任务
-         # 获取当前时间
-        now = datetime.now(shanghai_tz)
-        # 计算第二天的 8:49
-        next_day = now + timedelta(days=1)  # 增加一天
-        deadline = next_day.replace(hour=8, minute=49, second=0, microsecond=0)
-        reserve_and_check_in_task.apply_async((session_key,), eta=deadline)
+        # # 调度下一步任务
+        #  # 获取当前时间
+        # now = datetime.now(shanghai_tz)
+        # # 计算第二天的 8:49
+        # next_day = now + timedelta(days=1)  # 增加一天
+        # deadline = next_day.replace(hour=8, minute=49, second=0, microsecond=0)
+        # reserve_and_check_in_task.apply_async((session_key,), eta=deadline)
     else:
         print("预约座位失败，请稍后重试。")
 

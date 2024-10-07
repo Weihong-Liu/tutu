@@ -1,4 +1,5 @@
 URL = "http://wechat.v2.traceint.com/index.php/graphql/"
+PRE_RESERVE_URL = "https://wechat.v2.traceint.com/index.php/graphql/"
 
 # 首页信息body
 INDEX_BODY = {
@@ -37,3 +38,19 @@ KEEP_SESSION_BODY = {
     "operationName": "getUserCancleConfig"
 }
 
+# 前一天晚上22:00预约
+PRE_RESERVE_SEAT_BODY = {
+    "operationName": "save",
+    "query": "mutation save($key: String!, $libid: Int!, $captchaCode: String, $captcha: String) {\n userAuth {\n prereserve {\n save(key: $key, libId: $libid, captcha: $captcha, captchaCode: $captchaCode)\n }\n }\n}",
+    "variables": {
+        "key": "51,14",
+        "libid": 20038,
+        "captchaCode": "",
+        "captcha": ""
+    }
+}
+
+PRE_RESERVE_BODY = {
+    "operationName": "prereserve",
+    "query": "query prereserve {\n userAuth {\n prereserve {\n prereserve {\n day\n lib_id\n seat_key\n seat_name\n is_used\n user_mobile\n id\n lib_name\n }\n }\n }\n}"
+}

@@ -10,11 +10,20 @@ import threading
 from loguru import logger
 import pickle
 import redis
+import websocket
 
 import constants
 
 
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
+
+
+def store_cookie_str(key, value):
+    redis_client.set(key, value)
+
+
+def load_cookie_str(key):
+    return redis_client.get(key).decode()
 
 
 def store_session_data(session_key, session):
@@ -317,6 +326,163 @@ def reserve_cancel(session):
         else:
             logger.warning(result.get("errors")[0].get("msg"))
             return False
+
+
+def pass_queue():
+    logger.info("开始排队...")
+
+    queue_header = {
+        "Host": "wechat.v2.traceint.com",
+        "Pragma": "no-cache",
+        "Accept": "*/*",
+        "Sec-WebSocket-Key": "oXNRrZUmWXsDDq1Ay3ceUg==",
+        "Sec-Fetch-Site": "same-site",
+        "Sec-WebSocket-Version": "13",
+        "Sec-WebSocket-Extensions": "permessage-deflate",
+        "Cache-Control": "no-cache",
+        "Sec-Fetch-Mode": "websocket",
+        "Accept-Language": "zh-CN,zh-Hans;q=0.9",
+        "Origin": "https://web.traceint.com",
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.50(0x1800323d) NetType/WIFI Language/zh_CN",
+        "Connection": "Upgrade",
+        "Accept-Encoding": "gzip, deflate",
+        "Upgrade": "websocket",
+        "Sec-Fetch-Dest": "websocket",
+        'Cookie': ""
+    }
+
+    try:
+        ws = websocket.WebSocket()
+        # 获取 cookies 并转换为字符串
+        cookie_string = load_cookie_str("cookie_string")
+        queue_header['Cookie'] = cookie_string
+        # 尝试连接 WebSocket
+        ws.connect('wss://wechat.v2.traceint.com/ws?ns=prereserve/queue', header=queue_header, verify=False)
+
+        if ws.connected:
+            logger.info("WebSocket 连接成功，开始排队...")
+
+            while True:
+                # 发送排队请求
+                ws.send('{"ns":"prereserve/queue","msg":""}')
+                response = ws.recv()
+
+                # 检查排队成功或抢座成功的返回消息
+                if 'u6392' in response:  # 排队成功
+                    logger.info("排队成功！")
+                    break
+                elif 'u6210' in response:  # 抢座成功
+                    msg = json.loads(response).get("msg", "抢座成功，消息未找到")
+                    logger.info(f"抢座成功，消息: {msg}")
+                    time.sleep(5)
+                    break
+
+                logger.info(f"排队中，响应: {response}")
+                # time.sleep(0.01)  # 如果需要延迟，可以在这里启用
+
+        else:
+            logger.error("WebSocket 连接失败。")
+
+    except Exception as e:
+        logger.error(f"排队过程中发生错误: {e}")
+
+    finally:
+        # 关闭 WebSocket 连接
+        if ws.connected:
+            ws.close()
+
+    logger.info("排队结束...")
+
+
+def pre_reservation(session, seat, retry=1, time_interval=2):
+    """
+    前一天晚上22:00提前预订座位
+    """
+    # try:
+    #     pass_queue()
+    #     pass_queue()
+
+    #     print('test pass queue ==> ok!')
+    #     # 重要！如果不是放在常用座位，需要先请求对应的阅览室的所有座位，libLayout！！
+    #     # requests.post(url=url, headers=pre_header, json=data_lib_chosen, verify=False)
+    #     # 抢座的post请求，core code
+
+    #     pre_reserve_seat_body = copy.deepcopy(constants.PRE_RESERVE_SEAT_BODY)
+    #     pre_reserve_seat_body["variables"]["key"] = seat["seat_key"]
+    #     pre_reserve_seat_body["variables"]["libid"] = seat["lib_id"]
+    #     res = session.post(url=constants.URL, json=pre_reserve_seat_body, verify=False)
+    #     print('test request ==> ok!')
+    #     print(res.text)
+    #     text_Res = session.post(url=constants.URL, json=constants.PRE_RESERVE_BODY, verify=False).text
+    #     unicode = str(res.text).encode('utf-8').decode('unicode_escape')
+    #     text_uni = str(text_Res).encode('utf-8').decode('unicode_escape')
+    #     print(text_uni)
+    #     print(unicode)
+    #     if str(res.text).count("true") and text_Res.count('user_mobile'):
+    #         print("******************************")
+    #         print("恭喜你！预定成功！程序即将结束......")
+    #         print("******************************\n")
+    #         return True
+    #     else:
+    #         # print('---睡眠0.3s---')
+    #         pass_queue()
+    #         pass_queue()
+    #         time.sleep(0.3)
+    #         return False
+    # except Exception as e:
+    #     time.sleep(0.3)
+    #     print(e)
+    #     return False
+
+
+    try:
+        if check_session_status(session):
+            logger.info("开始预约流程...")
+            for _ in range(retry):
+                # 排队两次
+                pass_queue()
+                pass_queue()
+
+                logger.info("排队通过，准备发起抢座请求...")
+                # 请求阅览室的所有座位，准备抢座
+                # logger.info("请求对应阅览室的所有座位...")
+                # session.post(url=url, headers=headers, json=data_lib_chosen, verify=False)
+
+                # 发起抢座请求
+                logger.info("发起抢座请求...")
+
+                pre_reserve_seat_body = copy.deepcopy(constants.PRE_RESERVE_SEAT_BODY)
+                pre_reserve_seat_body["variables"]["key"] = seat["seat_key"]
+                pre_reserve_seat_body["variables"]["libid"] = seat["lib_id"]
+                res = session.post(url=constants.URL, json=pre_reserve_seat_body, verify=False)
+                text_Res = session.post(url=constants.URL, json=constants.PRE_RESERVE_BODY, verify=False).text
+
+                # 将返回的 JSON 数据转换为可读的字符串格式
+                unicode = str(res.text).encode('utf-8').decode('unicode_escape')
+                text_uni = str(text_Res).encode('utf-8').decode('unicode_escape')
+
+                logger.info(f"抢座响应：{unicode}")
+                logger.info(f"用户数据响应：{text_uni}")
+
+                # 检查预约成功
+                if str(res.text).count("true") and text_Res.count('user_mobile'):
+                    logger.info("******************************")
+                    logger.info("恭喜你！预定成功......")
+                    logger.info("******************************\n")
+                    return True
+
+                # 如果没有成功，继续排队并等待
+                logger.warning("预约未成功，重新排队...")
+                pass_queue()
+                pass_queue()
+                # 睡眠 0.3 秒后继续尝试
+                time.sleep(0.3)
+
+    except Exception as e:
+        logger.error(f"预约过程中发生错误: {e}")
+        time.sleep(time_interval)  # 出现异常时，延迟 0.3 秒后继续
+        return False
+
 
 
 def check_in(session):
